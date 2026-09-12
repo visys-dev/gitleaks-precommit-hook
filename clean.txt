@@ -1,3 +1,4 @@
 test
 test2
 disabled-test
+auto-install-hook-test
