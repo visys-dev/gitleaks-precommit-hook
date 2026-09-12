@@ -1,0 +1,63 @@
+#!/usr/bin/env sh
+
+set -eu
+
+echo "[gitleaks] Pre-commit secret scan"
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+GIT_DIR="$(git rev-parse --git-dir)"
+
+cd "$REPO_ROOT"
+
+ENABLED="$(git config --bool --get gitleaks.enabled 2>/dev/null || echo true)"
+
+if [ "$ENABLED" != "true" ]; then
+    echo "[gitleaks] Disabled via git config."
+    exit 0
+fi
+
+if git diff --cached --quiet; then
+    echo "[gitleaks] Nothing staged. Skipping scan."
+    exit 0
+fi
+
+case "$(uname -s)" in
+    MINGW*|MSYS*|CYGWIN*)
+        LOCAL_GITLEAKS="${GIT_DIR}/tools/gitleaks.exe"
+        ;;
+    *)
+        LOCAL_GITLEAKS="${GIT_DIR}/tools/gitleaks"
+        ;;
+esac
+
+if command -v gitleaks >/dev/null 2>&1; then
+    GITLEAKS_BIN="$(command -v gitleaks)"
+elif [ -f "$LOCAL_GITLEAKS" ]; then
+    GITLEAKS_BIN="$LOCAL_GITLEAKS"
+else
+    echo "[gitleaks] ERROR: gitleaks not found." >&2
+    echo "[gitleaks] Run installer before committing." >&2
+    exit 2
+fi
+
+echo "[gitleaks] Using: $GITLEAKS_BIN"
+
+if "$GITLEAKS_BIN" git \
+    --staged \
+    --redact \
+    --verbose
+then
+    echo "[gitleaks] No secrets detected."
+    exit 0
+else
+    STATUS=$?
+fi
+
+echo >&2
+echo "==========================================" >&2
+echo "ERROR: Gitleaks detected a potential secret." >&2
+echo "Commit rejected." >&2
+echo "Remove the secret and stage the changes again." >&2
+echo "==========================================" >&2
+
+exit "$STATUS"
