@@ -35,9 +35,32 @@ if command -v gitleaks >/dev/null 2>&1; then
 elif [ -f "$LOCAL_GITLEAKS" ]; then
     GITLEAKS_BIN="$LOCAL_GITLEAKS"
 else
-    echo "[gitleaks] ERROR: gitleaks not found." >&2
-    echo "[gitleaks] Run installer before committing." >&2
-    exit 2
+    echo "[gitleaks] Gitleaks not found."
+    echo "[gitleaks] Installing automatically..."
+
+    INSTALLER_URL="$(
+        git config --get gitleaks.installerUrl 2>/dev/null ||
+        echo "https://raw.githubusercontent.com/visys-dev/gitleaks-precommit-hook/main/scripts/install-gitleaks.sh"
+    )"
+
+    if ! curl \
+        --fail \
+        --silent \
+        --show-error \
+        --location \
+        "$INSTALLER_URL" |
+        sh
+    then
+        echo "[gitleaks] ERROR: automatic Gitleaks installation failed." >&2
+        exit 2
+    fi
+
+    if [ ! -f "$LOCAL_GITLEAKS" ]; then
+        echo "[gitleaks] ERROR: Gitleaks binary was not created." >&2
+        exit 2
+    fi
+
+    GITLEAKS_BIN="$LOCAL_GITLEAKS"
 fi
 
 echo "[gitleaks] Using: $GITLEAKS_BIN"
