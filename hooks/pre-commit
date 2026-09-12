@@ -30,10 +30,10 @@ case "$(uname -s)" in
         ;;
 esac
 
-if command -v gitleaks >/dev/null 2>&1; then
-    GITLEAKS_BIN="$(command -v gitleaks)"
-elif [ -f "$LOCAL_GITLEAKS" ]; then
+if [ -f "$LOCAL_GITLEAKS" ]; then
     GITLEAKS_BIN="$LOCAL_GITLEAKS"
+elif command -v gitleaks >/dev/null 2>&1; then
+    GITLEAKS_BIN="$(command -v gitleaks)"
 else
     echo "[gitleaks] Gitleaks not found."
     echo "[gitleaks] Installing automatically..."
